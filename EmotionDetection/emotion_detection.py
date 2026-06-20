@@ -2,39 +2,42 @@ import requests
 import json
 
 def emotion_detector(text_to_analyze):
-    # Define URL, headers, and payload
     url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
-    headers = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
     myobj = { "raw_document": { "text": text_to_analyze } }
+    header = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
     
-    # Post request to Watson NLP
-    response = requests.post(url, json=myobj, headers=headers)
+    response = requests.post(url, json=myobj, headers=header)
     
-    # Convert response text into a dictionary
+    # Check if the server response indicates a blank/invalid entry (Status Code 400)
+    if response.status_code == 400:
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
+        
+    # Standard processing if response is valid (Status Code 200)
     formatted_response = json.loads(response.text)
+    emotion_predictions = formatted_response['emotionPredictions'][0]['emotion']
     
-    # Extract the emotion block from the nested structure
-    # Based on the Watson response structure observed in Task 2
-    emotions = formatted_response['emotionPredictions'][0]['emotion']
+    anger_score = emotion_predictions['anger']
+    disgust_score = emotion_predictions['disgust']
+    fear_score = emotion_predictions['fear']
+    joy_score = emotion_predictions['joy']
+    sadness_score = emotion_predictions['sadness']
     
-    # Extract individual scores
-    anger_score = emotions['anger']
-    disgust_score = emotions['disgust']
-    fear_score = emotions['fear']
-    joy_score = emotions['joy']
-    sadness_score = emotions['sadness']
-    
-    # Logic to find the dominant emotion
-    dominant_emotion = max(emotions, key=emotions.get)
-    
-    # Format the desired output dictionary
-    output = {
+    emotions = {
         'anger': anger_score,
         'disgust': disgust_score,
         'fear': fear_score,
         'joy': joy_score,
-        'sadness': sadness_score,
-        'dominant_emotion': dominant_emotion
+        'sadness': sadness_score
     }
     
-    return output
+    dominant_emotion = max(emotions, key=emotions.get)
+    emotions['dominant_emotion'] = dominant_emotion
+    
+    return emotions
